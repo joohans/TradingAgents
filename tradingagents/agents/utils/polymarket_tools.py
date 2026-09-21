@@ -21,6 +21,13 @@ DATA_BASE = "https://data-api.polymarket.com"
 _MAX_RETRIES = 3
 _TIMEOUT = 30
 
+# Polymarket API is geo-blocked (HTTP 451) from some regions (e.g. KR).
+# Route ONLY Polymarket traffic through a proxy when POLY_PROXY is set
+# (e.g. socks5h://127.0.0.1:1080 tunnel via a Canada exit node).
+# LLM/news/other traffic stays direct.
+_POLY_PROXY = os.getenv("POLY_PROXY", "").strip()
+_PROXIES = {"http": _POLY_PROXY, "https": _POLY_PROXY} if _POLY_PROXY else None
+
 
 def _api_get(url: str, params: Optional[dict] = None) -> dict:
     """
@@ -30,7 +37,7 @@ def _api_get(url: str, params: Optional[dict] = None) -> dict:
     last_exc: Exception = RuntimeError("_api_get failed with no attempts")
     for attempt in range(_MAX_RETRIES):
         try:
-            resp = requests.get(url, params=params, timeout=_TIMEOUT)
+            resp = requests.get(url, params=params, timeout=_TIMEOUT, proxies=_PROXIES)
             resp.raise_for_status()
             return resp.json()
         except (requests.RequestException, ValueError) as exc:

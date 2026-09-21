@@ -9,9 +9,9 @@ DEFAULT_CONFIG = {
     ),
     # LLM settings
     "llm_provider": "openai",  # uses OpenAI-compatible API
-    "deep_think_llm": "Qwen/Qwen3-32B",
-    "quick_think_llm": "Qwen/Qwen3-32B",
-    "backend_url": "http://192.168.0.150:8001/v1",
+    "deep_think_llm": "gemma-4-31b-it",
+    "quick_think_llm": "gemma-4-31b-it",
+    "backend_url": "http://127.0.0.1:8001/v1",  # .151 gemma via mini-home vllm-tunnel
     # Provider-specific thinking configuration
     "google_thinking_level": None,
     "openai_reasoning_effort": None,

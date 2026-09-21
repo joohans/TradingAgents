@@ -87,6 +87,11 @@ def execute_bet(
     """
     global _daily_spent
 
+    # PAPER-ONLY HARD LOCK: if PAPER_ONLY env is set, force dry_run regardless of caller.
+    # Guarantees no real order is ever placed during the paper-trading trial.
+    if os.getenv("PAPER_ONLY", "").strip() not in ("", "0", "false", "False"):
+        dry_run = True
+
     action = decision.get("action", "SKIP")
     confidence = decision.get("confidence", 0)
     edge = abs(decision.get("edge", 0))

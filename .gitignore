@@ -219,3 +219,5 @@ __marimo__/
 **/data_cache/
 .superpowers/
 eval_results/
+.venv/
+results/
