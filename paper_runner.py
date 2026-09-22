@@ -15,7 +15,8 @@ Env:
   POLY_PROXY   socks5h://127.0.0.1:1080  (Canada exit; set by the service)
   PAPER_ONLY   1                          (hard-lock, always set)
   PAPER_MAX_EVENTS   default 3            (how many NEW events per run)
-  PAPER_MAX_DAYS     default 45           (only events ending within N days)
+  PAPER_MAX_DAYS     default 45           (only markets ending within N days)
+  PAPER_MIN_HOURS    default 6            (and no sooner than N hours — skips live micro-markets)
   PAPER_MIN_PRICE    default 0.02         (target market must have YES price in [p, 1-p]
                                            and be open; per event the top-volume such
                                            market is analyzed by its own question)
@@ -40,11 +41,17 @@ GAMMA = "https://gamma-api.polymarket.com"
 MAX_EVENTS = int(os.getenv("PAPER_MAX_EVENTS", "3"))
 MAX_DAYS = int(os.getenv("PAPER_MAX_DAYS", "45"))
 MIN_PRICE = float(os.getenv("PAPER_MIN_PRICE", "0.02"))   # skip YES price outside [p, 1-p]
+MIN_HOURS = float(os.getenv("PAPER_MIN_HOURS", "6"))      # skip markets ending sooner than this
 RESULTS_DIR = os.getenv("TRADINGAGENTS_RESULTS_DIR", os.path.join(os.path.dirname(__file__), "results"))
 OUT = os.path.join(RESULTS_DIR, "paper_trades.jsonl")
 
 
-def _within_days(end_date: str, days: int) -> bool:
+def _within_days(end_date: str, days: int, min_hours: float = 0.0) -> bool:
+    """True if end_date is at least min_hours away and at most `days` away.
+
+    min_hours keeps out in-progress micro-markets (e.g. "First Blood in Game 2?"
+    ending within the hour): a 4-5 minute multi-agent analysis is noise there.
+    """
     if not end_date:
         return False
     try:
@@ -52,7 +59,7 @@ def _within_days(end_date: str, days: int) -> bool:
     except ValueError:
         return False
     delta = (end - datetime.now(timezone.utc)).total_seconds()
-    return 0 < delta <= days * 86400
+    return min_hours * 3600 <= delta <= days * 86400
 
 
 def logged_keys() -> tuple[set[str], set[str]]:
@@ -104,8 +111,8 @@ def market_reason(m: dict, max_days: int, exclude_mids: set[str]) -> str | None:
         return "already logged"
     if m.get("closed") or m.get("active") is False:
         return "closed"
-    if not _within_days(m.get("endDate", ""), max_days):
-        return "end date out of range"
+    if not _within_days(m.get("endDate", ""), max_days, MIN_HOURS):
+        return f"end date out of range [{MIN_HOURS}h, {max_days}d]"
     p = _yes_price(m)
     if p is None:
         return "not binary"
